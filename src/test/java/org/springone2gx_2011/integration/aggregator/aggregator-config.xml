@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:int="http://www.springframework.org/schema/integration"
+	xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration-2.1.xsd
+		http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-3.0.xsd">
+
+
+	<int:aggregator input-channel="inputChannel" output-channel="loggingChannel" release-strategy-expression="size() == 5"
+			send-partial-result-on-expiry="true" message-store="messageStore" 
+			expire-groups-upon-completion="false"/>
+			
+	<int:logging-channel-adapter id="loggingChannel" log-full-message="true"/>
+
+	<bean id="reaper" class="org.springframework.integration.store.MessageGroupStoreReaper">
+		<property name="messageGroupStore" ref="messageStore"/>
+		<property name="timeout" value="5000"/>
+	</bean>
+	
+	<bean id="messageStore" class="org.springframework.integration.store.SimpleMessageStore"/>
+	
+	<task:scheduled-tasks scheduler="scheduler">	
+		<task:scheduled ref="reaper" method="run" fixed-rate="100"/>
+	</task:scheduled-tasks>
+	
+	<task:scheduler id="scheduler"/>
+
+</beans>

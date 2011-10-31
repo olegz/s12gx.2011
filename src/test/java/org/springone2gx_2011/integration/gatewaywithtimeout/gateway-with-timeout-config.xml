@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:int="http://www.springframework.org/schema/integration"
+	xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration-2.1.xsd
+		http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-3.0.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+	<int:gateway service-interface="org.springone2gx_2011.integration.gatewaywithtimeout.EchoGateway"
+		         default-request-channel="routingChannel"/>
+		         
+	<int:router input-channel="routingChannel" expression="payload">
+		<int:mapping value="foo" channel="fooChannel"/>
+		<int:mapping value="bar" channel="barChannel"/>
+	</int:router>
+	
+	<int:service-activator input-channel="fooChannel" expression="payload.toUpperCase()"/>
+	
+	<int:logging-channel-adapter id="barChannel" log-full-message="true"/>
+
+</beans>

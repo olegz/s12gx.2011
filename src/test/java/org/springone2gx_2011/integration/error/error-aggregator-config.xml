@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:int="http://www.springframework.org/schema/integration"
+	xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration-2.1.xsd
+		http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-3.0.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+	<int:gateway service-interface="org.springone2gx_2011.integration.error.ErrorDemo.ErrorDemoGateway"
+		default-request-channel="inputChannel" error-channel="processErrorChannel"/>
+
+	<int:splitter input-channel="inputChannel" output-channel="processingChannel"/>
+	
+	<int:channel id="processingChannel">
+		<int:dispatcher task-executor="executor"/>
+	</int:channel>
+	
+	<int:filter input-channel="processingChannel" output-channel="aggregationChannel" 
+				expression="payload.length() > 4" throw-exception-on-rejection="true"/>
+	
+	<int:channel id="aggregationChannel"/>
+	
+	<int:aggregator input-channel="aggregationChannel" output-channel="loggingChannel"/>
+	
+	<int:logging-channel-adapter id="loggingChannel" log-full-message="true" />
+	
+	<int:channel id="processErrorChannel"/>
+	
+	<int:transformer input-channel="processErrorChannel" output-channel="markErrorChannel" 
+			expression="payload.getFailedMessage()"/>
+	
+	<int:transformer input-channel="markErrorChannel" output-channel="aggregationChannel" 
+			expression="'##' + payload + '##'"/>
+	
+	
+	<task:executor id="executor" pool-size="5"/>
+
+</beans>

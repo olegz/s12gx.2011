@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:int="http://www.springframework.org/schema/integration"
+	xmlns:int-http="http://www.springframework.org/schema/integration/http"
+	xmlns:int-groovy="http://www.springframework.org/schema/integration/groovy"
+	xsi:schemaLocation="http://www.springframework.org/schema/integration/http http://www.springframework.org/schema/integration/http/spring-integration-http-2.1.xsd
+		http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration-2.1.xsd
+		http://www.springframework.org/schema/integration/groovy http://www.springframework.org/schema/integration/groovy/spring-integration-groovy-2.1.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
+
+	<int:enricher input-channel="inputChannel" request-channel="enrichmentChannel" 
+		output-channel="outputChannel">
+		<int:property name="marketInformation" expression="payload"/>
+		<int:property name="updated" expression="T(java.lang.System).currentTimeMillis()" />
+		<int:property name="updatePlace" value="SpringOne2GX - 2011, Chicago" />
+	</int:enricher>
+	
+	<int-http:outbound-gateway id="locationImageGateway"
+	                           request-channel="enrichmentChannel" 
+	                           reply-channel="normalizingChannel"
+					           url="http://www.google.com/finance/info?q={ticker}"
+					           http-method="GET"
+					           request-timeout="5000"
+					           expected-response-type="java.lang.String">
+           <int-http:uri-variable name="ticker" expression="payload.getTicker()"/>
+	</int-http:outbound-gateway>
+	
+	<int:transformer input-channel="normalizingChannel" 
+		output-channel="transformingChannel" expression="payload.replace('/', ' ').trim()"/>
+	
+	<int:json-to-object-transformer input-channel="transformingChannel" type="java.util.List"/>
+	
+	<int:logging-channel-adapter id="outputChannel" expression="'#####: ' + #this"/>
+	
+</beans>

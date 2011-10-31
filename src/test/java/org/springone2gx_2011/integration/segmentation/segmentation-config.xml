@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:int="http://www.springframework.org/schema/integration"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration-2.1.xsd">
+
+	<int:gateway id="segmentOneGateway"
+	             service-interface="org.springone2gx_2011.integration.segmentation.SegmentationDemo.SegmentOne"
+				 default-request-channel="segmentOneChannel"
+				 error-channel="s1Error"/>
+				 
+	<!-- SEGMENT ONE -->		 
+	<int:service-activator input-channel="segmentOneChannel" ref="segmentOne"/>
+	
+	<int:gateway id="segmentOne" default-request-channel="segmentOneInputChannel" error-channel="s1Error"/>
+
+	<int:service-activator input-channel="segmentOneInputChannel" output-channel="segmentTwoChannel"
+						   expression="payload%5 == 0 ? payload : payload/0"/>
+						   
+	
+	<!-- SEGMENT TWO -->	
+	<int:service-activator input-channel="segmentTwoChannel" ref="segmentTwo"/>
+	
+	<int:gateway id="segmentTwo" default-request-channel="segmentTwoInputChannel" error-channel="s2Error"/>
+						   
+	<int:service-activator input-channel="segmentTwoInputChannel" output-channel="segmentThreeChannel"
+	                       expression="payload%2 == 0 ? payload+2 : payload/0"/>
+	          
+	        
+	<!-- SEGMENT THREE -->	  
+	<int:service-activator input-channel="segmentThreeChannel" ref="segmentThree"/>
+	
+	<int:gateway id="segmentThree" default-request-channel="segmentThreeInputChannel" error-channel="s3Error"/>
+	          
+	<int:service-activator input-channel="segmentThreeInputChannel" 
+	                       expression="payload%3 == 0 ? payload+3 : payload/0"/>
+	
+	<int:channel id="s1Error"/>
+	
+	<int:transformer input-channel="s1Error" expression="'#' + payload.getFailedMessage().getPayload() + '#'"/>
+	
+	<int:channel id="s2Error"/>
+	
+	<int:transformer input-channel="s2Error" expression="'##' + payload.getFailedMessage().getPayload() + '##'"/>
+	
+	<int:channel id="s3Error"/>
+	
+	<int:transformer input-channel="s3Error" expression="'###' + payload.getFailedMessage().getPayload() + '###'"/>
+
+</beans>
