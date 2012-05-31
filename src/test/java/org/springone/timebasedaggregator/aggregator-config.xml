@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:int="http://www.springframework.org/schema/integration"
+	xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration-2.1.xsd
+		http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-3.0.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+		
+	
+	<int:channel id="inChannel">
+		<int:dispatcher task-executor="executor"/>
+	</int:channel>
+		
+	<int:aggregator input-channel="inChannel" output-channel="outChannel"
+			ref="customAggregator"
+			release-strategy-expression="size() == 10"
+			correlation-strategy-expression="payload"
+			message-store="messageStore"
+			send-partial-result-on-expiry="true"
+			expire-groups-upon-completion="true"/>
+		
+	<int:logging-channel-adapter id="outChannel" level="WARN" 
+				expression="'## Aggregation Results - Ticker: ' + payload + '; Average price: $' + headers.averagePrice"/>
+	
+	
+	<bean id="customAggregator" class="org.springone.timebasedaggregator.CustomAggregator"/>
+
+	<bean id="messageStore" class="org.springframework.integration.store.SimpleMessageStore">
+		<property name="expiryCallbacks">
+			<list>
+				<bean class="org.springone.timebasedaggregator.MarkerMessageProducingCallback"/>
+			</list>
+		</property>
+	</bean>
+	
+	<bean id="reaper" class="org.springframework.integration.store.MessageGroupStoreReaper">
+		<property name="messageGroupStore" ref="messageStore"/>
+		<property name="timeout" value="2000"/>
+	</bean>
+	
+	<task:scheduled-tasks scheduler="scheduler" >
+		<task:scheduled ref="reaper" method="run" fixed-rate="100"/>
+	</task:scheduled-tasks>
+
+	<task:scheduler id="scheduler" pool-size="10"/>
+	<task:executor id="executor" pool-size="10"/>
+</beans>
